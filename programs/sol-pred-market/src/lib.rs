@@ -8,23 +8,51 @@ pub mod sol_pred_market {
     use super::*;
 
     pub fn initialize(ctx: Context<Initialize>) -> Result<()> {
-        msg!("Greetings from: {:?}", ctx.program_id);
+        
+
+
         Ok(())
     }
 
-    pub fn create_market(ctx : Context<CreateMarket>, market_id: String) -> Result<()> {
+    pub fn create_market(ctx : Context<CreateMarket>, 
+        market_id: String,
+        fee_bps: u16,
+        question: String) -> Result<()> {
+        
+        let market = &mut ctx.accounts.market;
+        let bumps = ctx.bumps;
+
+        market.authority = ctx.accounts.authority.key();
+        market.bump = bumps.market;
+        market.escrow_bump = bumps.escrow_authority;
+
+        market.fee_bps = fee_bps;
+        market.market_id = market_id;
+        market.question = question;
+
+        market.is_resolved = false;
+        market.outcome = None;
+        market.yes_wagered = 0;
+        market.no_wagered = 0;
+        
+        
         Ok(())
     }
 
     pub fn abort_market(ctx: Context<AbortMarket>) -> Result<()> {
+        let market = &mut ctx.accounts.market;
+        market.is_resolved = true;
+        market.outcome = Some(Outcome::Aborted);
+
+        // return all escrowed funds to persons who have placed bets
+
         Ok(())
     }
 
     pub fn resolve_market(ctx : Context<ResolveMarket>) -> Result<()> {
-        Ok(())
-    }
-
-    pub fn place_bet(ctx: Context<PlaceBet>) -> Result<()> {
+        let market = &mut ctx.accounts.market;
+        market.is_resolved = true;
+        market.outcome = Some(Outcome::Yes);
         Ok(())
     }
 }
@@ -153,6 +181,12 @@ impl Market {
 pub enum Outcome {
     Yes,
     No,
-    Invalid
+    Invalid,
+    Aborted
 }
 
+#[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, PartialEq, Eq)]
+pub enum BetOutcome {
+    Yes,
+    No,
+}
