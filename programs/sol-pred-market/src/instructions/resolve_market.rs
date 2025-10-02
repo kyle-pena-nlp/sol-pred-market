@@ -1,0 +1,31 @@
+use anchor_lang::prelude::*;
+use crate::state::{Market};
+use crate::errors::ErrorCode;
+use crate::state::MarketResolution;
+
+pub fn handler(ctx : Context<ResolveMarket>, resolution : MarketResolution) -> Result<()> {
+    let market = &mut ctx.accounts.market;
+
+    if ctx.accounts.signer.key() != market.authority {
+        return Err(ErrorCode::Unauthorized.into());
+    }
+
+    market.is_closed = true;
+    market.outcome = Some(resolution.to_outcome());
+
+    Ok(())
+}
+
+
+#[derive(Accounts)]
+#[instruction(market_id: String)] 
+pub struct ResolveMarket<'info> {
+    #[account(
+        seeds = [b"market", market_id.as_bytes()],
+        bump
+    )]
+    pub market: Account<'info, Market>,
+
+    #[account(mut)]
+    pub signer: Signer<'info>,
+}
