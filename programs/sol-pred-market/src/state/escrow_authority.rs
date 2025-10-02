@@ -4,3 +4,7 @@ use anchor_lang::prelude::*;
 pub struct EscrowAuthority {
     bump : u8
 }
+
+impl EscrowAuthority {
+    pub const LEN : usize = 8;
+}
