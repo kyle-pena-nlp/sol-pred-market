@@ -17,8 +17,8 @@ pub mod sol_pred_market {
 
     use super::*;
 
-    pub fn abort_market(context: Context<AbortMarket>) -> Result<()> {
-        instructions::abort_market::handler(context)
+    pub fn abort_market(context: Context<AbortMarket>, market_id : String) -> Result<()> {
+        instructions::abort_market::handler(context, market_id)
     }
 
     pub fn claim_reward(context: Context<ClaimReward>) -> Result<()> {
@@ -33,8 +33,8 @@ pub mod sol_pred_market {
         instructions::place_bet::handler(context, amount, wagered_outcome)
     }
 
-    pub fn resolve_market(context: Context<ResolveMarket>, resolution: MarketResolution) -> Result<()> {
-        instructions::resolve_market::handler(context, resolution)
+    pub fn resolve_market(context: Context<ResolveMarket>, market_id : String, resolution: MarketResolution) -> Result<()> {
+        instructions::resolve_market::handler(context, market_id, resolution)
     }
 
     pub fn withdraw_after_abort(context: Context<WithdrawAfterAbort>) -> Result<()> {

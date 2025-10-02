@@ -4,12 +4,8 @@ use crate::state::Market;
 use crate::errors::ErrorCode;
 use crate::state::Outcome;
 
-pub fn handler(ctx: Context<AbortMarket>) -> Result<()> {
+pub fn handler(ctx: Context<AbortMarket>, _market_id: String) -> Result<()> {
     let market = &mut ctx.accounts.market;
-
-    if ctx.accounts.signer.key() != market.authority {
-        return Err(ErrorCode::Unauthorized.into());
-    }
 
     market.is_closed = true;
     market.outcome = Some(Outcome::Aborted);
@@ -22,6 +18,7 @@ pub fn handler(ctx: Context<AbortMarket>) -> Result<()> {
 pub struct AbortMarket<'info> {
     #[account(
         seeds = [b"market", market_id.as_bytes()],
+        constraint = signer.key() == market.authority @ ErrorCode::Unauthorized,
         bump
     )]
     pub market: Account<'info, Market>,
