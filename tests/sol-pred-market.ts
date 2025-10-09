@@ -1,15 +1,42 @@
 import * as anchor from "@coral-xyz/anchor";
 import { Program } from "@coral-xyz/anchor";
+
 import { SolPredMarket } from "../target/types/sol_pred_market";
 import { TOKEN_PROGRAM_ID } from "@coral-xyz/anchor/dist/cjs/utils/token";
-import { assert, expect } from "./bootstrap";
+import { NATIVE_MINT, 
+  ASSOCIATED_TOKEN_PROGRAM_ID, 
+  createSyncNativeInstruction, 
+  createAssociatedTokenAccountIdempotentInstruction
+} from "@solana/spl-token";
+import { getAssociatedTokenAddressSync } from "@solana/spl-token";
 import { BN } from "@coral-xyz/anchor";
 import { CreateMarketArgs, CreateMarketResult } from "./types";
-type MarketAccount = anchor.IdlAccounts<SolPredMarket>["market"]
+import { assert, expect } from "chai";
+import { SystemProgram } from "@solana/web3.js";
 
-const NATIVE_MINT = new anchor.web3.PublicKey(
-  "So11111111111111111111111111111111111111112",
-);
+// pull the enum type from the IDL
+type MarketAccount = anchor.IdlTypes<SolPredMarket>['market'];
+type MarketResolution = anchor.IdlTypes<SolPredMarket>['marketResolution'];
+type BetEscrowFundsStatus = anchor.IdlTypes<SolPredMarket>['betEscrowFundsStatus'];
+type Bet = anchor.IdlTypes<SolPredMarket>['bet'];
+type EscrowAuthority = anchor.IdlTypes<SolPredMarket>['escrowAuthority'];
+
+// make values
+const YES: MarketResolution = { yes: {} };
+const NO:  MarketResolution = { no: {} };
+
+const FUNDED : BetEscrowFundsStatus = { funded: {} };
+const WITHDRAWN : BetEscrowFundsStatus = { withdrawn: {} };
+
+// Much easier to do this then fight with chai-as-promised in this environment.
+async function doesThrow<T>(fn : Promise<T>) {
+  try {
+    await fn;
+    return false;
+  } catch (e) {
+    return true;
+  }
+}
 
 async function createMarket(args: CreateMarketArgs) : Promise<CreateMarketResult> {
 
@@ -26,14 +53,8 @@ async function createMarket(args: CreateMarketArgs) : Promise<CreateMarketResult
     args.program.programId);
 
   const tx = await args.program.methods.createMarket(args.marketId, args.feeBps, args.question).accounts({
-    market: marketPda,
     signer: args.wallet.publicKey,
-    escrowAuthority: escrowAuthorityPDA,
-    escrow: escrowPda,
-    mint: NATIVE_MINT,
-    systemProgram: anchor.web3.SystemProgram.programId,
-    tokenProgram: TOKEN_PROGRAM_ID,
-    rent: anchor.web3.SYSVAR_RENT_PUBKEY,
+    mint: NATIVE_MINT
   }).rpc();
 
   const bumps = {
@@ -54,13 +75,61 @@ async function createMarket(args: CreateMarketArgs) : Promise<CreateMarketResult
   };
 }
 
+// airdrop 1 SOl, put half in wrapped SOL
+async function fundSOL(wallet : anchor.Wallet) {
+  const connection = anchor.AnchorProvider.env().connection;
+  const sig = await connection.requestAirdrop(
+    wallet.publicKey,
+    1 * anchor.web3.LAMPORTS_PER_SOL
+  );
+  await connection.confirmTransaction(sig, "confirmed");
+
+  // 2) Get/create owner's WSOL ATA (native mint)
+  const wsolAta = getAssociatedTokenAddressSync(
+    NATIVE_MINT,
+    wallet.publicKey,
+    true, // allow owner to be a PDA if needed
+    TOKEN_PROGRAM_ID
+  );
+
+  const createAtaIx = createAssociatedTokenAccountIdempotentInstruction(
+    wallet.publicKey, // payer for rent
+    wsolAta,
+    wallet.publicKey,
+    NATIVE_MINT,
+    TOKEN_PROGRAM_ID
+  );
+
+  // 3) Transfer lamports into the WSOL ATA (this “wraps” SOL)
+  const transferIx = SystemProgram.transfer({
+    fromPubkey: wallet.publicKey,
+    toPubkey: wsolAta,
+    lamports: 0.5 * anchor.web3.LAMPORTS_PER_SOL,
+  });
+
+  // 4) Sync native so token amount == lamports
+  const syncIx = createSyncNativeInstruction(wsolAta);
+
+  const tx = new anchor.web3.Transaction().add(createAtaIx, transferIx, syncIx);
+  await anchor.web3.sendAndConfirmTransaction(connection, tx, [wallet.payer], {
+    commitment: "confirmed",
+  });
+}
+
 describe("sol-pred-market", () => {
+
   // Configure the client to use the local cluster.
   anchor.setProvider(anchor.AnchorProvider.env());
   const wallet = anchor.AnchorProvider.env().wallet as anchor.Wallet;
   const program = anchor.workspace.SolPredMarket as Program<SolPredMarket>;
   const question = "Will BTC > $100k by 2027?";
   const feeBps = 200; // 2%
+
+  before(async function () {
+    // Airdrop some SOL to the wallet.
+    await fundSOL(wallet);
+  });
+
 
   it("Creates a market", async () => {
     const marketId = "mkt:created-market";
@@ -90,6 +159,8 @@ describe("sol-pred-market", () => {
 
   it("cannot create a market with same market_id if already created", async () => {
     const marketId = "mkt:created-market-dupped";
+    
+    // create market once
     await createMarket({
       marketId,
       question,
@@ -97,20 +168,22 @@ describe("sol-pred-market", () => {
       program,
       wallet
     });
-    expect(createMarket({
-      marketId,
-      question : question + "-dedup",
-      feeBps : feeBps + 1,
-      program,
-      wallet
-    })).to.be.rejectedWith("Market already exists");
+
+    // create market again
+    expect(await doesThrow(createMarket({
+        marketId,
+        question : question + "-dedup",
+        feeBps : feeBps + 1,
+        program,
+        wallet
+    }))).to.be.true;
+
   });
 
   // aborting a market
 
   it("can abort a market", async () => {
     const marketId = "mkt:aborted-market";
-
 
     const result = await createMarket({
       marketId,
@@ -121,7 +194,6 @@ describe("sol-pred-market", () => {
     });
 
     await program.methods.abortMarket(marketId).accounts({
-      market: result.marketPda,
       signer: wallet.publicKey,
     }).rpc();
 
@@ -131,24 +203,119 @@ describe("sol-pred-market", () => {
   });
 
   it("cannot abort a market that is already aborted", async () => {
+    const marketId = "mkt:abort-twice";
 
+    const result = await createMarket({
+      marketId,
+      question,
+      feeBps,
+      program,
+      wallet
+    });
+
+    await program.methods.abortMarket(marketId).accounts({
+      signer: wallet.publicKey,
+    }).rpc();
+
+    expect(await doesThrow(program.methods.abortMarket(marketId).accounts({
+      signer: wallet.publicKey,
+    }).rpc())).to.be.true;
   });
 
   it("cannot abort a market that is already resolved", async () => {
+    const marketId = "mkt:abort-resolved";
+
+    const result = await createMarket({
+      marketId,
+      question,
+      feeBps,
+      program,
+      wallet
+    });
+
+    await program.methods.resolveMarket(marketId, YES).accounts({
+      signer: wallet.publicKey,
+    }).rpc();
+    
+    expect(await doesThrow(program.methods.abortMarket(marketId).accounts({
+      signer: wallet.publicKey,
+    }).rpc())).to.be.true;
+    
 
   });
 
   it("cannot abort a non-existent market", async () => {
+    const marketId = "mkt:abort-DNE";
 
+    const result = await createMarket({
+      marketId,
+      question,
+      feeBps,
+      program,
+      wallet
+    });
+    
+    expect(await doesThrow(program.methods.abortMarket("wrong-market-id").accounts({
+      signer: wallet.publicKey,
+    }).rpc())).to.be.true;
   });
 
   // placing a bet
 
-  it("cannot place a bet on a non-existent market", () => {
-
-  });
-
   it("can place a bet", async () => {
+    const marketId = "mkt:bet";
+
+    const result = await createMarket({
+      marketId,
+      question,
+      feeBps,
+      program,
+      wallet
+    });
+
+    const ata = getAssociatedTokenAddressSync(
+      NATIVE_MINT,    
+      wallet.publicKey,
+      false,                
+      TOKEN_PROGRAM_ID,          
+      ASSOCIATED_TOKEN_PROGRAM_ID
+    
+    );
+
+    const betLamports = 10;
+
+    await (program.methods.placeBet(marketId, new anchor.BN(betLamports), YES).accounts({
+      signer: wallet.publicKey,
+      mint: NATIVE_MINT,
+      bettorTokenAccount : ata
+    }).rpc());
+
+    
+
+    
+    // test that the bet PDA exists and has proper status
+    const [betPda, betBump] = anchor.web3.PublicKey.findProgramAddressSync(
+      [Buffer.from("bet"), result.marketPda.toBuffer(), wallet.publicKey.toBuffer()],
+      program.programId);
+    const betAccount = await program.account.bet.fetch(betPda);
+    assert.deepStrictEqual(betAccount.authority.toBytes(), wallet.publicKey.toBytes());
+    assert.equal(betAccount.bump, betBump);
+    assert.equal(betAccount.amount.eq(new anchor.BN(betLamports)), true);
+    assert.deepStrictEqual(betAccount.wageredOutcome, YES);
+    assert.deepStrictEqual(betAccount.escrowFundsStatus, FUNDED);
+    
+    const escrowAta = getAssociatedTokenAddressSync(
+      NATIVE_MINT,    
+      result.escrowPda,
+      false,                
+      TOKEN_PROGRAM_ID,          
+      ASSOCIATED_TOKEN_PROGRAM_ID
+    );
+    const bal = await program.provider.connection.getTokenAccountBalance(escrowAta, 'confirmed');
+    const balValue : anchor.web3.TokenAmount = bal.value;
+    assert.equal(parseInt(balValue.amount, 10), 10);
+    
+    assert.deepStrictEqual(betAccount.escrowFundsStatus, FUNDED);
     
   });
 

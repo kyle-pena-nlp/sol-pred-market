@@ -6,10 +6,6 @@ use crate::state::MarketResolution;
 pub fn handler(ctx : Context<ResolveMarket>, _market_id : String, resolution : MarketResolution) -> Result<()> {
     let market = &mut ctx.accounts.market;
 
-    if ctx.accounts.signer.key() != market.authority {
-        return Err(ErrorCode::Unauthorized.into());
-    }
-
     market.is_closed = true;
     market.outcome = Some(resolution.to_outcome());
 
@@ -21,8 +17,10 @@ pub fn handler(ctx : Context<ResolveMarket>, _market_id : String, resolution : M
 #[instruction(market_id: String)] 
 pub struct ResolveMarket<'info> {
     #[account(
+        mut,
         seeds = [b"market", market_id.as_bytes()],
-        bump
+        bump,
+        constraint = market.authority == signer.key() @ ErrorCode::Unauthorized
     )]
     pub market: Account<'info, Market>,
 

@@ -18,4 +18,6 @@ pub enum ErrorCode {
     MarketIsNotResolved,
     #[msg("Wagered outcome does not match market outcome")]
     WagerAndOutcomeDoNotMatch,
+    #[msg("Invalid token")]
+    InvalidToken,
 }
