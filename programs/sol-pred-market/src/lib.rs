@@ -1,7 +1,11 @@
+
+
+
 use anchor_lang::prelude::*;
 use anchor_spl::token::{Token, TokenAccount, Mint};
 
 declare_id!("8WAGVU5JeuxzMzC3BgV2EvT1i2UPP2QSi4ABQegfck7Z");
+
 
 #[program]
 pub mod sol_pred_market {
@@ -171,8 +175,9 @@ pub mod sol_pred_market {
         // as a bettor, you are entitled to a fraction of the loser's pot
         // which is proportional to the amount of your bet compared to all winner's bets
         // (your bet / all winner bets) * [loser's bets]
+        // that way, the loser's funds are distributed fairly amongst the winners.
         // to avoid underflow with integer math, we do the division last 
-        let numerator =  (bet.amount as u64) * (pot_for_winners as u64);
+        let numerator =  (bet.amount as u64).checked_mul(pot_for_winners as u64).unwrap();
         let denominator = winner_wagers as u64;
         let reward = numerator.checked_div(denominator).unwrap();
 
