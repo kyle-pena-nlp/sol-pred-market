@@ -9,13 +9,15 @@ use anchor_spl::token::{Token, TokenAccount, Mint};
 
 
 pub fn handler(ctx : Context<PlaceBet>, _market_id : String, amount : u64, wagered_outcome: MarketResolution) -> Result<()> {
+    
     let market = &mut ctx.accounts.market;
-
 
     // cannot place a bet on a market that is closed due to being aborted, resolved, etc.
     if market.is_closed {
         return Err(ErrorCode::MarketIsClosed.into());
     }
+
+    msg!("here");
 
     // transfer appropriate funds into escrow
     token::transfer(
@@ -29,6 +31,8 @@ pub fn handler(ctx : Context<PlaceBet>, _market_id : String, amount : u64, wager
         ),
         amount,
     )?;
+
+    msg!("here again");
 
     // initialize the bet - `init` attribute prevents double initialization
     let bet = &mut ctx.accounts.bet;
@@ -70,6 +74,7 @@ pub struct PlaceBet<'info> {
 
     // PDA token account to hold escrow
     #[account(
+        mut,
         seeds = [b"escrow", market.key().as_ref()],
         bump,
         token::mint = mint,
@@ -77,7 +82,8 @@ pub struct PlaceBet<'info> {
     )]
     pub escrow: Account<'info, TokenAccount>,    
 
-    #[account(mut, 
+    #[account(
+        mut, 
         constraint = bettor_token_account.owner == signer.key() @ ErrorCode::Unauthorized,
         constraint = bettor_token_account.mint == escrow.mint @ ErrorCode::InvalidToken,
     )]
