@@ -1,0 +1,31 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+      {
+        "type": "node",
+        "request": "launch",
+        "name": "Debug Tests",
+        "preLaunchTask": "Start Solana Test Validator",
+        "postDebugTask": "Stop Solana Test Validator",
+        "program": "${workspaceFolder}/node_modules/ts-mocha/bin/ts-mocha",
+        "args": [
+          "-p", "./tsconfig.json",
+          "-t", "1000000",
+          "tests/**/*.ts"
+        ],
+        "cwd": "${workspaceFolder}",
+        "console": "integratedTerminal",
+        "skipFiles": ["<node_internals>/**"],
+        "sourceMaps": true,
+        "smartStep": true,
+        "runtimeArgs": ["--nolazy"],
+        "stopOnEntry": false,
+        "env": {
+            "ANCHOR_PROVIDER_URL": "http://127.0.0.1:${config:anchor.rpcPort}",
+            "ANCHOR_WALLET": "${env:HOME}/.config/solana/id.json",
+            "NODE_OPTIONS": "--dns-result-order=ipv4first"
+          }
+      }
+    ]
+  }
+  

@@ -1,0 +1,4 @@
+{
+    // keep this in sync with [test.validator].rpc_port in Anchor.toml
+    "anchor.rpcPort": 19999
+  }

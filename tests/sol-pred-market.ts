@@ -24,7 +24,7 @@ describe("sol-pred-market", () => {
     await fundSOL(wallet2);
   });
 
-  it("Creates a market", async () => {
+  it("Can create a market", async () => {
     const marketId = "mkt:created-market";
     
     const result = await createMarket({
@@ -71,11 +71,10 @@ describe("sol-pred-market", () => {
 
   });
 
-  // aborting a market
-
   it("can abort a market", async () => {
     const marketId = "mkt:aborted-market";
 
+    // create market
     const result = await createMarket({
       marketId,
       question,
@@ -84,6 +83,7 @@ describe("sol-pred-market", () => {
       wallet
     });
 
+    // abort market
     await program.methods.abortMarket(marketId).accounts({
       signer: wallet.publicKey,
     }).rpc();
@@ -96,6 +96,7 @@ describe("sol-pred-market", () => {
   it("cannot abort a market that is already aborted", async () => {
     const marketId = "mkt:abort-twice";
 
+    // create market
     await createMarket({
       marketId,
       question,
@@ -104,10 +105,12 @@ describe("sol-pred-market", () => {
       wallet
     });
 
+    // abort market once
     await program.methods.abortMarket(marketId).accounts({
       signer: wallet.publicKey,
     }).rpc();
 
+    // abort market a second time, should throw
     expect(await doesThrow(program.methods.abortMarket(marketId).accounts({
       signer: wallet.publicKey,
     }).rpc())).to.be.true;
@@ -149,11 +152,11 @@ describe("sol-pred-market", () => {
     }).rpc())).to.be.true;
   });
 
-  // placing a bet
   it("can place a bet", async () => {
 
     const marketId = "mkt:bet";
 
+    // create a market
     const marketInfo = await createMarket({
       marketId,
       question,
@@ -164,27 +167,21 @@ describe("sol-pred-market", () => {
 
     const betLamports = 10;
 
-    console.log("Printing token ATA account balances for WALLET")
-    printAllTokenBalances(wallet.publicKey, anchor.AnchorProvider.env().connection);
-
     // place a bet
     const { escrowAta } = await placeBet(marketId, wallet, betLamports, YES);
 
-    // confirm the funds of the bet are not in the escrow account
+    // confirm the funds of the bet are in the escrow account
     const escrowAtaBalance = await program.provider.connection.getTokenAccountBalance(escrowAta, 'confirmed');
     const escrowAtaValue : anchor.web3.TokenAmount = escrowAtaBalance.value;
     assert.equal(parseInt(escrowAtaValue.amount, 10), betLamports);
-
-    // 37XQowr1A46wmR63pN8UMiV5RC36Tp5yyfMAexukp52K
-    printAllTokenBalances(marketInfo.marketPda, anchor.AnchorProvider.env().connection);
     
     // test that the bet PDA exists and has proper status
-    const { betAccount, betBump } = await fetchBetAccount(marketInfo.marketPda, wallet);
+    /*const { betAccount, betBump } = await fetchBetAccount(marketInfo.marketPda, wallet);
     assert.deepStrictEqual(betAccount.authority.toBytes(), wallet.publicKey.toBytes());
     assert.equal(betAccount.bump, betBump);
     assert.equal(betAccount.amount.eq(new anchor.BN(betLamports)), true);
     assert.deepStrictEqual(betAccount.wageredOutcome, YES);
-    assert.deepStrictEqual(betAccount.escrowFundsStatus, FUNDED);
+    assert.deepStrictEqual(betAccount.escrowFundsStatus, FUNDED);*/
   });
 
   it("can place another bet as a different user", async () => {

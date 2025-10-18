@@ -7,7 +7,6 @@ import { getAssociatedTokenAddressSync } from "@solana/spl-token";
 import { CreateMarketArgs, CreateMarketResult, MarketAccount, MarketResolution } from "./types";
 import { Connection, PublicKey, SystemProgram } from "@solana/web3.js";
 import { TOKEN_PROGRAM_ID } from "@coral-xyz/anchor/dist/cjs/utils/token";
-import { program } from "@coral-xyz/anchor/dist/cjs/native/system";
 import { ASSOCIATED_TOKEN_PROGRAM_ID } from "./consts";
 import { Program } from "@coral-xyz/anchor";
 import { SolPredMarket } from "../target/types/sol_pred_market";
