@@ -1,5 +1,5 @@
 use anchor_lang::prelude::*;
-use crate::state::{Market};
+use crate::state::{Market, EscrowAuthority};
 use anchor_spl::token::{Token, TokenAccount, Mint};
 
 
@@ -52,7 +52,7 @@ pub struct CreateMarket<'info> {
         seeds = [b"escrow_authority", market.key().as_ref()],
         bump
     )]
-    pub escrow_authority : UncheckedAccount<'info>,
+    pub escrow_authority : Account<'info, EscrowAuthority>,
 
     // PDA token account to hold escrow
     #[account(

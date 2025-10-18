@@ -3,6 +3,7 @@ use crate::state::{Market, Bet};
 use crate::errors::ErrorCode;
 use crate::state::MarketResolution;
 use crate::state::BetEscrowFundsStatus;
+use crate::state::EscrowAuthority;
 use anchor_spl::token::{self, Transfer};
 use anchor_spl::token::{Token, TokenAccount, Mint};
 
@@ -65,7 +66,7 @@ pub struct PlaceBet<'info> {
         seeds = [b"escrow_authority", market.key().as_ref()],
         bump
     )]
-    pub escrow_authority : UncheckedAccount<'info>,    
+    pub escrow_authority : Account<'info, EscrowAuthority>,    
 
     // PDA token account to hold escrow
     #[account(
