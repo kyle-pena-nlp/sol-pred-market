@@ -10,7 +10,9 @@ import { YES, NO, FUNDED, WITHDRAWN, NATIVE_MINT, TOKEN_PROGRAM_ID, ASSOCIATED_T
 describe("sol-pred-market", () => {
 
   // Configure the client to use the local cluster.
-  anchor.setProvider(anchor.AnchorProvider.env());
+  const provider = anchor.AnchorProvider.env();
+  provider.opts.commitment = 'confirmed';
+  anchor.setProvider(provider);
   const wallet = anchor.AnchorProvider.env().wallet as anchor.Wallet;
   const wallet2 = new anchor.Wallet(anchor.web3.Keypair.generate());
 
@@ -36,7 +38,7 @@ describe("sol-pred-market", () => {
     });
 
     assert.ok(result.marketAccount.authority.equals(wallet.publicKey));
-    assert.equal(result.marketAccount.bump, result.bumps.marketBump);
+    assert.equal(result.marketAccount.bump, result.bumps.marketBump); 
     assert.equal(result.marketAccount.escrowBump, result.bumps.escrowBump);
     assert.equal(result.marketAccount.escrowAuthorityBump, result.bumps.escrowAuthorityBump);
     assert.equal(result.marketAccount.feeBps, feeBps);
