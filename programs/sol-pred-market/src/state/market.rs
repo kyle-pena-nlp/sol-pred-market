@@ -22,6 +22,7 @@ pub struct Market {
 
     pub market_dump: u8,
     pub escrow_bump: u8,
+    pub escrow_authority_bump: u8
 }
 
 impl Market {
@@ -36,5 +37,6 @@ impl Market {
         + 8  // yes_wagered
         + 8  // no_wagered
         + 1  // market_dump
-        + 1; // escrow_bump
+        + 1  // escrow_bump
+        + 1; // escrow_authority_bump
 }

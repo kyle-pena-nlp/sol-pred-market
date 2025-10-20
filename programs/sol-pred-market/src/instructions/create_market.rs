@@ -14,6 +14,8 @@ pub fn handler(ctx : Context<CreateMarket>,
     market.authority = ctx.accounts.signer.key();
     market.bump = bumps.market;
     market.escrow_bump = bumps.escrow_authority;
+    market.escrow_authority_bump = bumps.escrow_authority;
+    market.escrow_bump = bumps.escrow;
 
     market.fee_bps = fee_bps;
     market.market_id = market_id;
@@ -49,6 +51,9 @@ pub struct CreateMarket<'info> {
 
     // the authority for the escrow - programatically derived as a PDA
     #[account(
+        init,
+        payer = signer,
+        space = 8 + EscrowAuthority::LEN,
         seeds = [b"escrow_authority", market.key().as_ref()],
         bump
     )]
