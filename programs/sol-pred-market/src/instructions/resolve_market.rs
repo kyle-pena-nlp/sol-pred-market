@@ -3,7 +3,7 @@ use crate::state::{Market};
 use crate::errors::ErrorCode;
 use crate::state::MarketResolution;
 
-pub fn handler(ctx : Context<ResolveMarket>, resolution : MarketResolution) -> Result<()> {
+pub fn handler(ctx : Context<ResolveMarket>, _market_id : String, resolution : MarketResolution) -> Result<()> {
     let market = &mut ctx.accounts.market;
 
     if ctx.accounts.signer.key() != market.authority {
