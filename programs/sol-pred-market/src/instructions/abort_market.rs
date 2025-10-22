@@ -17,6 +17,7 @@ pub fn handler(ctx: Context<AbortMarket>, _market_id: String) -> Result<()> {
 #[instruction(market_id: String)] 
 pub struct AbortMarket<'info> {
     #[account(
+        mut,
         seeds = [b"market", market_id.as_bytes()],
         constraint = signer.key() == market.authority @ ErrorCode::Unauthorized,
         bump
