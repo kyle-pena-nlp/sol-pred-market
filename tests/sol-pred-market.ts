@@ -13,10 +13,17 @@ describe("sol-pred-market", () => {
   const provider = anchor.AnchorProvider.env();
   provider.opts.commitment = 'confirmed';
   anchor.setProvider(provider);
-  const wallet = anchor.AnchorProvider.env().wallet as anchor.Wallet;
-  const wallet2 = new anchor.Wallet(anchor.web3.Keypair.generate());
 
+  const wallet = anchor.AnchorProvider.env().wallet as anchor.Wallet;
   const program = anchor.workspace.SolPredMarket as Program<SolPredMarket>;
+  
+  const wallet2 = new anchor.Wallet(anchor.web3.Keypair.generate());
+  const provider2 = new anchor.AnchorProvider(provider.connection, wallet2, { commitment: 'confirmed' });
+  const program2 = new anchor.Program(
+    program.idl,
+    provider2
+  ) as Program<SolPredMarket>;
+  
   const question = "Will BTC > $100k by 2027?";
   const feeBps = 200; // 2%
 
@@ -170,7 +177,7 @@ describe("sol-pred-market", () => {
     const betLamports = 10;
 
     // place a bet
-    const { escrowAta } = await placeBet(marketId, wallet, betLamports, YES);
+    const { escrowAta } = await placeBet(program, marketId, wallet, betLamports, YES);
 
     // confirm the funds of the bet are in the escrow account
     const escrowAtaBalance = await program.provider.connection.getTokenAccountBalance(escrowAta, 'confirmed');
@@ -178,24 +185,72 @@ describe("sol-pred-market", () => {
     assert.equal(parseInt(escrowAtaValue.amount, 10), betLamports);
     
     // test that the bet PDA exists and has proper status
-    /*const { betAccount, betBump } = await fetchBetAccount(marketInfo.marketPda, wallet);
+    const { betAccount, betBump } = await fetchBetAccount(marketInfo.marketPda, wallet);
     assert.deepStrictEqual(betAccount.authority.toBytes(), wallet.publicKey.toBytes());
     assert.equal(betAccount.bump, betBump);
     assert.equal(betAccount.amount.eq(new anchor.BN(betLamports)), true);
     assert.deepStrictEqual(betAccount.wageredOutcome, YES);
-    assert.deepStrictEqual(betAccount.escrowFundsStatus, FUNDED);*/
+    assert.deepStrictEqual(betAccount.escrowFundsStatus, FUNDED);
   });
 
   it("can place another bet as a different user", async () => {
+    const marketId = "mkt:2-user";
 
+    // create a market
+    const marketInfo = await createMarket({
+      marketId,
+      question,
+      feeBps,
+      program,
+      wallet
+    });
+
+    const betLamports = 10;
+    console.log("wallet.publicKey", wallet.publicKey.toString());
+    console.log("wallet2.publicKey", wallet2.publicKey.toString());
+
+    // both users place bets
+    const { escrowAta: escrowAta1 } = await placeBet(program, marketId, wallet, betLamports, YES);
+    const { escrowAta: escrowAta2 } = await placeBet(program2, marketId, wallet2, betLamports, NO);
+    assert.deepStrictEqual(escrowAta1, escrowAta2);
+
+    // double check first user's wallet 
+    const { betAccount: betAccount1, betBump: betBump1 } = await fetchBetAccount(marketInfo.marketPda, wallet);
+    assert.deepStrictEqual(betAccount1.authority.toBytes(), wallet.publicKey.toBytes());
+    assert.deepStrictEqual(betAccount1.wageredOutcome, YES);
+
+    const { betAccount: betAccount2, betBump: betBump2 } = await fetchBetAccount(marketInfo.marketPda, wallet2);
+    assert.deepStrictEqual(betAccount1.authority.toBytes(), wallet.publicKey.toBytes());
+    assert.deepStrictEqual(betAccount2.wageredOutcome, NO);
+
+    const escrowAtaBalance = await program.provider.connection.getTokenAccountBalance(escrowAta1, 'confirmed');
+    const escrowAtaValue : anchor.web3.TokenAmount = escrowAtaBalance.value;
+    assert.equal(parseInt(escrowAtaValue.amount, 10), betLamports * 2);
   });
 
   it("cannot place a second bet as same user", async () => {
+    const marketId = "mkt:user-dup-bet";
+    
+    // create a market
+    const marketInfo = await createMarket({
+      marketId,
+      question,
+      feeBps,
+      program,
+      wallet
+    });
 
+    const betLamports = 10;
+    await placeBet(program, marketId, wallet, betLamports, YES);
+    expect(await doesThrow(placeBet(program, marketId, wallet, betLamports, YES))).to.be.true;
   });
 
   it("cannot place bet after market is aborted", async () => {
+    const marketId = "mkt:no-bet-abrt-mkt";
 
+    const marketInfo = await createMarket({
+      market
+    })
   });
 
 
