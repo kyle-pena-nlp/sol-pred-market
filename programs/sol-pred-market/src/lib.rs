@@ -29,8 +29,8 @@ pub mod sol_pred_market {
         instructions::create_market::handler(context, market_id, fee_bps, question)
     }
 
-    pub fn place_bet(context: Context<PlaceBet>, amount: u64, wagered_outcome: MarketResolution) -> Result<()> {
-        instructions::place_bet::handler(context, amount, wagered_outcome)
+    pub fn place_bet(context: Context<PlaceBet>, market_id: String, amount: u64, wagered_outcome: MarketResolution) -> Result<()> {
+        instructions::place_bet::handler(context, market_id, amount, wagered_outcome)
     }
 
     pub fn resolve_market(context: Context<ResolveMarket>, market_id : String, resolution: MarketResolution) -> Result<()> {

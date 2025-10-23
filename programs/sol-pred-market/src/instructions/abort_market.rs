@@ -7,6 +7,10 @@ use crate::state::Outcome;
 pub fn handler(ctx: Context<AbortMarket>, _market_id: String) -> Result<()> {
     let market = &mut ctx.accounts.market;
 
+    if (market.is_closed) {
+        return Err(ErrorCode::MarketIsClosed.into());
+    }
+
     market.is_closed = true;
     market.outcome = Some(Outcome::Aborted);
 

@@ -8,7 +8,7 @@ use anchor_spl::token::{self, Transfer};
 use anchor_spl::token::{Token, TokenAccount, Mint};
 
 
-pub fn handler(ctx : Context<PlaceBet>, amount : u64, wagered_outcome: MarketResolution) -> Result<()> {
+pub fn handler(ctx : Context<PlaceBet>, _market_id : String, amount : u64, wagered_outcome: MarketResolution) -> Result<()> {
     let market = &mut ctx.accounts.market;
 
 
@@ -78,7 +78,8 @@ pub struct PlaceBet<'info> {
     pub escrow: Account<'info, TokenAccount>,    
 
     #[account(mut, 
-        constraint = bettor_token_account.owner == signer.key()
+        constraint = bettor_token_account.owner == signer.key() @ ErrorCode::Unauthorized,
+        constraint = bettor_token_account.mint == escrow.mint @ ErrorCode::InvalidToken,
     )]
     pub bettor_token_account : Account<'info, TokenAccount>,
 
