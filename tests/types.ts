@@ -1,6 +1,16 @@
 import * as anchor from "@coral-xyz/anchor";
 import { SolPredMarket } from "../target/types/sol_pred_market";
 
+
+// anchor IDL derived types
+export type MarketAccount = anchor.IdlTypes<SolPredMarket>['market'];
+export type MarketResolution = anchor.IdlTypes<SolPredMarket>['marketResolution'];
+export type BetEscrowFundsStatus = anchor.IdlTypes<SolPredMarket>['betEscrowFundsStatus'];
+export type Bet = anchor.IdlTypes<SolPredMarket>['bet'];
+export type EscrowAuthority = anchor.IdlTypes<SolPredMarket>['escrowAuthority'];
+
+// custom types just for the tests
+
 export type CreateMarketArgs = {
   wallet: anchor.Wallet,
   program: anchor.Program<SolPredMarket>,
@@ -11,7 +21,7 @@ export type CreateMarketArgs = {
 
 export type CreateMarketResult = {
   tx: string,
-  marketAccount: Market,
+  marketAccount: MarketAccount,
   bumps: {
     marketBump: number,
     escrowBump: number,
