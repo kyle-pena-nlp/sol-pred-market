@@ -21,8 +21,8 @@ pub mod sol_pred_market {
         instructions::abort_market::handler(context, market_id)
     }
 
-    pub fn claim_reward(context: Context<ClaimReward>) -> Result<()> {
-        instructions::claim_reward::handler(context)
+    pub fn claim_reward(context: Context<ClaimReward>, market_id : String) -> Result<()> {
+        instructions::claim_reward::handler(context, market_id)
     }
 
     pub fn create_market(context: Context<CreateMarket>, market_id: String, fee_bps: u16, question: String) -> Result<()> {

@@ -26,7 +26,9 @@ pub fn handler(ctx : Context<CreateMarket>,
     market.yes_wagered = 0;
     market.no_wagered = 0;
     
-    
+    let escrow_authority = &mut ctx.accounts.escrow_authority;
+    escrow_authority.bump = bumps.escrow_authority;
+
     Ok(())
 }
 
