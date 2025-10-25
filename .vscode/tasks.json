@@ -1,0 +1,39 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Start Solana Test Validator",
+      "type": "shell",
+      "command": "pkill -f \"anchor localnet\" || true && sleep 3 && anchor localnet",
+      "isBackground": true,
+      "problemMatcher": {
+        "pattern": {
+          "regexp": "^$",
+          "file": 1,
+          "location": 2,
+          "message": 3
+        },
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": "^.*Starting test validator.*",
+          "endsPattern": "^.*RPC URL:.*"
+        }
+      },
+      "presentation": {
+        "showReuseMessage": false,
+        "close": true
+      }
+    },
+    {
+        "label": "Stop Solana Test Validator",
+        "type": "shell",
+        "command": "pkill -f \"anchor localnet\"",
+        "isBackground": false,
+        "presentation": {
+            "reveal": "never",          // don't pop the terminal
+            "showReuseMessage": false,  // hide “Terminal will be reused…” line
+            "close": true               // auto-close the terminal when the task exits
+        }
+    }
+  ]
+}
