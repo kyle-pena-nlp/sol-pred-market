@@ -16,8 +16,7 @@ wallet = "~/.config/solana/id.json"
 
 [scripts]
 test = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 tests/**/*.ts"
-test-debug = "yarn run ts-mocha -p ./tsconfig.json --inspect=9330 -t 1000000 tests/**/*.ts"
-test-brk-debug = "yarn run ts-mocha -p ./tsconfig.json --inspect-brk=9330 -t 1000000 tests/**/*.ts"
 
 [test.validator]
 rpc_port = 19999                 # RPC on 19999, WS on 20000
+commitment = "confirmed"
