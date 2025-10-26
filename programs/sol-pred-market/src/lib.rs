@@ -37,8 +37,8 @@ pub mod sol_pred_market {
         instructions::resolve_market::handler(context, market_id, resolution)
     }
 
-    pub fn withdraw_after_abort(context: Context<WithdrawAfterAbort>) -> Result<()> {
-        instructions::withdraw_after_abort::handler(context)
+    pub fn withdraw_after_abort(context: Context<WithdrawAfterAbort>, market_id : String) -> Result<()> {
+        instructions::withdraw_after_abort::handler(context, market_id)
     }
 
 

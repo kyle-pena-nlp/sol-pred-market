@@ -3,7 +3,7 @@ import { Program } from "@coral-xyz/anchor";
 import { SolPredMarket } from "../target/types/sol_pred_market";
 import { BN } from "@coral-xyz/anchor";
 import { assert, expect } from "chai";
-import { fetchBetAccount, getAllTokenBalances as printAllTokenBalances, getEscrowATA, placeBet, claimReward, fetchEscrowATAAccountAmount, fetchWalletATAAccountAmount } from "./utils";
+import { fetchBetAccount, getAllTokenBalances as printAllTokenBalances, getEscrowATA, placeBet, claimReward, fetchEscrowATAAccountAmount, fetchWalletATAAccountAmount, getWalletATA } from "./utils";
 import { createMarket, doesThrow, fundSOL } from "./utils";
 import { YES, NO, FUNDED, WITHDRAWN, NATIVE_MINT, TOKEN_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID } from "./consts";
 
@@ -542,11 +542,55 @@ describe("sol-pred-market", () => {
 
   // withdraw after abort
 
-  it("can withdraw bet and fee after abort", () => {
+  it("can withdraw bet and fee after abort", async () => {
+    const marketId = "mkt-withdraw-after-abort";
+
+    // create a market
+    const marketInfo = await createMarket({
+      marketId,
+      question,
+      feeBps,
+      program,
+      wallet
+    });
+
+    const preBetATABalance = await fetchWalletATAAccountAmount(wallet.publicKey);
+
+    await placeBet(program, marketId, wallet, 10, YES);
+
+    // abort market
+    await program.methods.abortMarket(marketId).accounts({
+      signer: wallet.publicKey,
+    }).rpc();
+
+    await program.methods.withdrawAfterAbort(marketId).accounts({
+      signer: wallet.publicKey,
+      mint: NATIVE_MINT
+    }).rpc();
+
+    const postWithdrawATABalance = await fetchWalletATAAccountAmount(wallet.publicKey);
+
+    assert.equal(Number(preBetATABalance.amount), Number(postWithdrawATABalance.amount));
 
   });
 
-  it("cannot withdraw bet and fee if market is not aborted", () => {
+  it("cannot withdraw bet and fee if market is not aborted", async () => {
+    const marketId = "mkt-withdraw-not-aborted";
 
+    // create a market
+    const marketInfo = await createMarket({
+      marketId,
+      question,
+      feeBps,
+      program,
+      wallet
+    });
+
+    await placeBet(program, marketId, wallet, 10, YES);
+
+    expect(await doesThrow(program.methods.withdrawAfterAbort(marketId).accounts({
+      signer: wallet.publicKey,
+      mint: NATIVE_MINT
+    }).rpc()), "MarketIsNotAborted").to.be.true;
   });
 });

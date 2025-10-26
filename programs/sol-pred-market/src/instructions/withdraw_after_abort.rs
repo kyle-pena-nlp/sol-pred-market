@@ -8,7 +8,7 @@ use anchor_spl::token::{Token, TokenAccount, Mint};
 use crate::state::Outcome;
 
 // user claims back their funds if the market is aborted
-pub fn handler(ctx : Context<WithdrawAfterAbort>) -> Result<()> {
+pub fn handler(ctx : Context<WithdrawAfterAbort>, _market_id : String) -> Result<()> {
     let market = &mut ctx.accounts.market;
 
 
