@@ -20,7 +20,8 @@ pub struct ResolveMarket<'info> {
         mut,
         seeds = [b"market", market_id.as_bytes()],
         bump,
-        constraint = market.authority == signer.key() @ ErrorCode::Unauthorized
+        constraint = market.authority == signer.key() @ ErrorCode::Unauthorized,
+        constraint = market.is_closed == false @ ErrorCode::MarketIsClosed,
     )]
     pub market: Account<'info, Market>,
 

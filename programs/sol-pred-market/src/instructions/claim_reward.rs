@@ -9,8 +9,12 @@ use crate::errors::ErrorCode;
 use anchor_spl::token::{self, Transfer};
 use anchor_spl::token::{Token, TokenAccount, Mint};
 
-pub fn handler(ctx: Context<ClaimReward>) -> Result<()> {
+pub fn handler(ctx: Context<ClaimReward>, _market_id: String) -> Result<()> {
     let market = &mut ctx.accounts.market;
+
+    if (market.outcome == Some(Outcome::Aborted)) {
+        return Err(ErrorCode::MarketIsAborted.into());
+    }
 
     // can't claim your reward if the market is not resolved to yes or no
     if market.outcome != Some(Outcome::Yes) && market.outcome != Some(Outcome::No) {
@@ -32,14 +36,14 @@ pub fn handler(ctx: Context<ClaimReward>) -> Result<()> {
     // calculation of reward
     
     // how much of the market did others wager in the same outcome?
-    let winner_wagers: u64 = match wager_and_outcome {
+    let winner_total_wagers: u64 = match wager_and_outcome {
         (MarketResolution::Yes, Outcome::Yes) => market.yes_wagered,
         (MarketResolution::No, Outcome::No) => market.no_wagered,
         _ => 0,
     };
 
     // how much of the market did others wager in the opposite outcome?
-    let pot_for_winners: u64 = match wager_and_outcome {
+    let loser_total_wagers: u64 = match wager_and_outcome {
         (MarketResolution::Yes, Outcome::No) => market.yes_wagered,
         (MarketResolution::No, Outcome::Yes) => market.no_wagered,
         _ => 0,
@@ -51,21 +55,41 @@ pub fn handler(ctx: Context<ClaimReward>) -> Result<()> {
     // (your bet / all winner bets) * [loser's bets]
     // that way, the loser's funds are distributed fairly amongst the winners.
     // to avoid underflow with integer math, we do the division last 
-    let numerator =  (bet.amount as u64).checked_mul(pot_for_winners as u64).unwrap();
-    let denominator = winner_wagers as u64;
-    let reward = numerator.checked_div(denominator).unwrap();
+
+    // Lastly: as an integer math thing, you would need to write this as: (your_bet * winner_bets) / [loser's bets]
+    let numerator =  (bet.amount as u64).checked_mul(loser_total_wagers as u64).unwrap();
+    let denominator = winner_total_wagers as u64;
+
+    msg!("bet.amount {}", bet.amount);
+    msg!("loser_total_wagers {}", loser_total_wagers);
+    msg!("numerator {}", numerator);
+    msg!("denominator {}", denominator);
+    let reward_from_loser_wagers = match denominator > 0 {
+        true => numerator.checked_div(denominator).unwrap(),
+        false => 0,
+    };
+
+    let total_reward = bet.amount + reward_from_loser_wagers;
+    let market_key = market.key();  
+    let escrow_authority_seeds = &[
+        b"escrow_authority",
+        market_key.as_ref(),
+        &[ctx.bumps.escrow_authority],
+    ];
+    let signer_seeds = &[&escrow_authority_seeds[..]];
 
     // transfer the reward from escrow
     token::transfer(
-        CpiContext::new(
+        CpiContext::new_with_signer(
             ctx.accounts.token_program.to_account_info(),
             Transfer {
                 from: ctx.accounts.escrow.to_account_info(),
                 to: ctx.accounts.bettor_token_account.to_account_info(),
-                authority: ctx.accounts.signer.to_account_info(),
+                authority: ctx.accounts.escrow_authority.to_account_info(),
             },
+            signer_seeds
         ),
-        reward,
+        total_reward,
     )?;
 
     bet.escrow_funds_status = BetEscrowFundsStatus::Withdrawn;
@@ -103,6 +127,7 @@ pub struct ClaimReward<'info> {
 
     // PDA token account to hold escrow
     #[account(
+        mut,
         seeds = [b"escrow", market.key().as_ref()],
         bump,
         token::mint = mint,

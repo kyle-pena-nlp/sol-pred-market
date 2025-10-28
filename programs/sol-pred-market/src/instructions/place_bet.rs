@@ -17,7 +17,7 @@ pub fn handler(ctx : Context<PlaceBet>, _market_id : String, amount : u64, wager
         return Err(ErrorCode::MarketIsClosed.into());
     }
 
-    msg!("here");
+    
 
     // transfer appropriate funds into escrow
     token::transfer(
@@ -31,8 +31,6 @@ pub fn handler(ctx : Context<PlaceBet>, _market_id : String, amount : u64, wager
         ),
         amount,
     )?;
-
-    msg!("here again");
 
     // initialize the bet - `init` attribute prevents double initialization
     let bet = &mut ctx.accounts.bet;
@@ -56,6 +54,7 @@ pub fn handler(ctx : Context<PlaceBet>, _market_id : String, amount : u64, wager
 #[instruction(market_id : String)]
 pub struct PlaceBet<'info> {
     #[account(
+        mut,
         seeds = [b"market", market_id.as_bytes()],
         bump
     )]
