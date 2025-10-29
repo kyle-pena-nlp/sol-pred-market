@@ -3,7 +3,7 @@ import { Program } from "@coral-xyz/anchor";
 import { SolPredMarket } from "../target/types/sol_pred_market";
 import { BN } from "@coral-xyz/anchor";
 import { assert, expect } from "chai";
-import { fetchBetAccount, getAllTokenBalances as printAllTokenBalances, getEscrowATA, placeBet, claimReward, fetchEscrowATAAccountAmount, fetchWalletATAAccountAmount, getWalletATA } from "./utils";
+import { fetchBetAccount, getAllTokenBalances as printAllTokenBalances, getEscrowATA, placeBet, claimReward, fetchEscrowATAAccountAmount, fetchWalletATAAccountAmount } from "./utils";
 import { createMarket, doesThrow, fundSOL } from "./utils";
 import { YES, NO, FUNDED, WITHDRAWN, NATIVE_MINT, TOKEN_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID } from "./consts";
 
