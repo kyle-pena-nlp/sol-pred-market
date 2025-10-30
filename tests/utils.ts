@@ -174,11 +174,11 @@ export async function fetchWalletATAAccountAmount(wallet : anchor.web3.PublicKey
 
 export async function placeBet(program : Program<SolPredMarket>, marketId : string, wallet : anchor.Wallet, amount : number, outcome : MarketResolution) {
 
-  console.log(`Wagering ${amount} for ${anchorEnumToString(outcome)} on market ${marketId} by ${wallet.publicKey.toString()}`);
+  console.debug(`Wagering ${amount} for ${anchorEnumToString(outcome)} on market ${marketId} by ${wallet.publicKey.toString()}`);
   
   const walletAta = getAssociatedTokenAddressSync(NATIVE_MINT, wallet.publicKey, true, TOKEN_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID);
   
-  console.log(`Wallet ATA that will be withdrawn from: ${walletAta.toString()}`);
+  console.debug(`Wallet ATA that will be withdrawn from: ${walletAta.toString()}`);
 
   // Derive the market PDA to get the escrow account
   const [marketPda] = anchor.web3.PublicKey.findProgramAddressSync(
@@ -186,12 +186,12 @@ export async function placeBet(program : Program<SolPredMarket>, marketId : stri
     program.programId
   );
 
-  console.log(`Market account that bet will be placed on: ${marketPda.toString()}`);
+  console.debug(`Market account that bet will be placed on: ${marketPda.toString()}`);
   
   // Derive the escrow account that will be used by the instruction
   const { escrowAta } = await getEscrowATA(marketPda);
   
-  console.log("Escrow account that instruction will use:", escrowAta.toString());
+  console.debug("Escrow account that instruction will use:", escrowAta.toString());
   
   await (program.methods.placeBet(marketId, new anchor.BN(amount), outcome).accounts({
     signer: wallet.publicKey,
