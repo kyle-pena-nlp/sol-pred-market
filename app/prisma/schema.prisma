@@ -1,0 +1,58 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Market {
+  id              String   @id @default(cuid())
+  marketId        String   @unique
+  question        String
+  authority       String
+  feeBps          Int
+  isClosed        Boolean  @default(false)
+  outcome         String?  // "Yes", "No", or null
+  yesWagered      BigInt   @default(0)
+  noWagered       BigInt   @default(0)
+  marketPubkey    String   @unique
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  resolvedAt      DateTime?
+  bets            Bet[]
+  
+  @@index([isClosed])
+  @@index([createdAt])
+}
+
+model Bet {
+  id              String   @id @default(cuid())
+  marketId        String
+  market          Market   @relation(fields: [marketId], references: [marketId])
+  bettor          String   // wallet address
+  amount          BigInt
+  wageredOutcome  String   // "Yes" or "No"
+  escrowStatus    String   // "Funded" or "Withdrawn"
+  betPubkey       String   @unique
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@index([bettor])
+  @@index([marketId])
+  @@index([createdAt])
+}
+
+model User {
+  id              String   @id @default(cuid())
+  walletAddress   String   @unique
+  totalWagered    BigInt   @default(0)
+  totalWon        BigInt   @default(0)
+  totalLost       BigInt   @default(0)
+  marketsCreated  Int      @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@index([walletAddress])
+}
