@@ -166,8 +166,8 @@ export async function fetchEscrowATAAccountAmount(marketPda: anchor.web3.PublicK
 }
 
 export async function fetchWalletATAAccountAmount(wallet : anchor.web3.PublicKey) : Promise<anchor.web3.TokenAmount> {
-  const { walletAta } = await getWalletATA(wallet);
   const program = await getProgram();
+  const walletAta = getAssociatedTokenAddressSync(NATIVE_MINT, wallet, true, TOKEN_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID);
   const amount = (await program.provider.connection.getTokenAccountBalance(walletAta, 'confirmed')).value;
   return amount;
 }
